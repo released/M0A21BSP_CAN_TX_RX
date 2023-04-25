@@ -12,7 +12,11 @@ update @ 2023/04/24
     
 	CAN_EnterTestMode(CAN1, CAN_TEST_LBACK_Msk); 
 
-3. below is log capture 
+4. similiar device ID use same MSG OBJ ID to save MSG usage , by using RX mask function
+
+check function : CAN_SetRxMsgAndMsk
+
+5. below is log capture 
 
 ![image](https://github.com/released/M0A21BSP_CAN_TX_RX/blob/main/log.jpg)		
 	

@@ -9,9 +9,9 @@
 
 struct flag_32bit flag_PROJ_CTL;
 #define FLAG_PROJ_TIMER_PERIOD_1000MS                 	(flag_PROJ_CTL.bit0)
-#define FLAG_PROJ_REVERSE1                   			(flag_PROJ_CTL.bit1)
-#define FLAG_PROJ_REVERSE2                 				(flag_PROJ_CTL.bit2)
-#define FLAG_PROJ_REVERSE3                              (flag_PROJ_CTL.bit3)
+#define FLAG_PROJ_TIMER_PERIOD_2000MS                   (flag_PROJ_CTL.bit1)
+#define FLAG_PROJ_TIMER_PERIOD_4000MS                 	(flag_PROJ_CTL.bit2)
+#define FLAG_PROJ_TIMER_PERIOD_8000MS                   (flag_PROJ_CTL.bit3)
 #define FLAG_PROJ_REVERSE4                              (flag_PROJ_CTL.bit4)
 #define FLAG_PROJ_REVERSE5                              (flag_PROJ_CTL.bit5)
 #define FLAG_PROJ_REVERSE6                              (flag_PROJ_CTL.bit6)
@@ -23,9 +23,67 @@ struct flag_32bit flag_PROJ_CTL;
 volatile unsigned int counter_systick = 0;
 volatile uint32_t counter_tick = 0;
 
+#define CAN_MASK_MSG_DIR    (0x1ul << 30) /*!< CAN mask direction bit \hideinitializer */
+#define CAN_MASK_EXT_ID_BIT (0x1ul << 31) /*!< CAN mask extended id bit \hideinitializer */
 
-#define CustomID_CHECK                                  ((uint32_t)0x601101) 
-STR_CANMSG_T rrMsg;
+
+/**
+ * @brief Specifies the standard identifier mask used for acceptance filtering
+ *
+ * @param[in] mask_bit The standard id mask bits.
+ *
+ * @return Mask ID bit.
+ *
+ *  \hideinitializer
+ */
+#define CAN_STD_ID_MASK(mask_bit) (mask_bit << 18)
+
+/**
+ * @brief Specifies the extended identifier mask used for acceptance filtering
+ *
+ * @param[in] mask_bit The extended id mask bits.
+ *
+ * @return Mask ID bit.
+ *
+*  \hideinitializer
+ */
+#define CAN_EXT_ID_MASK(mask_bit) (mask_bit)
+
+#define CAN_DEVICE_1                                    ((uint32_t)0x601101) 
+#define CAN_DEVICE_1_MsgID_r                            (MSG(0))
+#define CAN_DEVICE_1_MsgID_t                            (MSG(31))
+
+#define CAN_DEVICE_2                                    ((uint32_t)0x600) 
+#define CAN_DEVICE_2_MsgID_r                            (MSG(1))
+#define CAN_DEVICE_2_MsgID_t                            (MSG(30))
+
+#define CAN_DEVICE_3                                    ((uint32_t)0x628) 
+#define CAN_DEVICE_3_MsgID_r                            (MSG(1))    //similiar device ID , use RX mask to saving msg obj usage
+#define CAN_DEVICE_3_MsgID_t                            (MSG(29))
+
+#define CAN_DEVICE_4                                    ((uint32_t)0x7FFFE)
+#define CAN_DEVICE_4_MsgID_r                            (MSG(2))
+#define CAN_DEVICE_4_MsgID_t                            (MSG(28))
+
+#define CAN_DEVICE_5                                    ((uint32_t)0x7FFF2) 
+#define CAN_DEVICE_5_MsgID_r                            (MSG(2))    //similiar device ID , use RX mask to saving msg obj usage
+#define CAN_DEVICE_5_MsgID_t                            (MSG(27))
+
+
+typedef struct
+{
+    uint32_t  IdType;       
+    uint32_t  FrameType;    
+    uint32_t  Id;    
+    uint32_t  rMsgID;    
+    uint32_t  tMsgID;           
+} CANMSG_T;
+
+CANMSG_T deviceA;
+CANMSG_T deviceB;
+CANMSG_T deviceC;
+CANMSG_T deviceD;
+CANMSG_T deviceE;
 /*_____ M A C R O S ________________________________________________________*/
 
 /*_____ F U N C T I O N S __________________________________________________*/
@@ -112,13 +170,161 @@ void tick_counter(void)
 }
 
 
+uint8_t CAN0_transmit5(void)
+{
+    uint8_t can_data[8] = {0};
+    STR_CANMSG_T msg1;
+    uint8_t i = 0;
+    __IO static uint8_t cnt = 0;
+    uint8_t dlc = 8;
+
+    can_data[0] = 0x5E;
+    can_data[1] = 0x5E;
+
+    can_data[2] = cnt;
+
+    can_data[6] = 0xE5;
+    can_data[7] = 0xE5;
+
+    msg1.FrameType= deviceE.FrameType;
+    msg1.IdType   = deviceE.IdType;
+    msg1.Id       = deviceE.Id;
+    msg1.DLC      = dlc;
+
+    for(i = 0 ; i < dlc; i++)
+    {
+        msg1.Data[i] = can_data[i];
+    }
+    
+    if (CAN_Transmit(CAN, deviceE.tMsgID , &msg1) == FALSE)
+    {
+        printf("set tx msg failed\r\n");
+        return 0;
+    }
+
+    cnt++;
+
+    return 1;
+}
+
+uint8_t CAN0_transmit4(void)
+{
+    uint8_t can_data[8] = {0};
+    STR_CANMSG_T msg1;
+    uint8_t i = 0;
+    __IO static uint8_t cnt = 0;
+    uint8_t dlc = 8;
+
+    can_data[0] = 0x5D;
+    can_data[1] = 0x5D;
+
+    can_data[2] = cnt;
+
+    can_data[6] = 0xD5;
+    can_data[7] = 0xD5;
+
+    msg1.FrameType= deviceD.FrameType;
+    msg1.IdType   = deviceD.IdType;
+    msg1.Id       = deviceD.Id;
+    msg1.DLC      = dlc;
+
+    for(i = 0 ; i < dlc; i++)
+    {
+        msg1.Data[i] = can_data[i];
+    }
+    
+    if (CAN_Transmit(CAN, deviceD.tMsgID , &msg1) == FALSE)
+    {
+        printf("set tx msg failed\r\n");
+        return 0;
+    }
+
+    cnt++;
+
+    return 1;
+}
+
+uint8_t CAN0_transmit3(void)
+{
+    uint8_t can_data[8] = {0};
+    STR_CANMSG_T msg1;
+    uint8_t i = 0;
+    __IO static uint8_t cnt = 0;
+    uint8_t dlc = 8;
+
+    can_data[0] = 0x5C;
+    can_data[1] = 0x5C;
+
+    can_data[2] = cnt;
+
+    can_data[6] = 0xC5;
+    can_data[7] = 0xC5;
+
+    msg1.FrameType= deviceC.FrameType;
+    msg1.IdType   = deviceC.IdType;
+    msg1.Id       = deviceC.Id;
+    msg1.DLC      = dlc;
+
+    for(i = 0 ; i < dlc; i++)
+    {
+        msg1.Data[i] = can_data[i];
+    }
+    
+    if (CAN_Transmit(CAN, deviceC.tMsgID , &msg1) == FALSE)
+    {
+        printf("set tx msg failed\r\n");
+        return 0;
+    }
+
+    cnt++;
+
+    return 1;
+}
+
+uint8_t CAN0_transmit2(void)
+{
+    uint8_t can_data[8] = {0};
+    STR_CANMSG_T msg1;
+    uint8_t i = 0;
+    __IO static uint8_t cnt = 0;
+    uint8_t dlc = 8;
+
+    can_data[0] = 0x5B;
+    can_data[1] = 0x5B;
+
+    can_data[2] = cnt;
+
+    can_data[6] = 0xB5;
+    can_data[7] = 0xB5;
+
+    msg1.FrameType= deviceB.FrameType;
+    msg1.IdType   = deviceB.IdType;
+    msg1.Id       = deviceB.Id;
+    msg1.DLC      = dlc;
+
+    for(i = 0 ; i < dlc; i++)
+    {
+        msg1.Data[i] = can_data[i];
+    }
+    
+    if (CAN_Transmit(CAN, deviceB.tMsgID , &msg1) == FALSE)
+    {
+        printf("set tx msg failed\r\n");
+        return 0;
+    }
+
+    cnt++;
+
+    return 1;
+}
+
 void CAN0_Sender(uint32_t can_id , uint8_t* can_data , uint8_t dlc)
 {
     STR_CANMSG_T msg1;
     uint8_t i = 0;
  
-    msg1.FrameType= CAN_DATA_FRAME;
-    msg1.IdType   = CAN_EXT_ID;
+    msg1.FrameType= deviceA.FrameType;
+    msg1.IdType   = deviceA.IdType;
     msg1.Id       = can_id;
     msg1.DLC      = dlc;
 
@@ -127,18 +333,18 @@ void CAN0_Sender(uint32_t can_id , uint8_t* can_data , uint8_t dlc)
         msg1.Data[i] = can_data[i];
     }
     
-    if (CAN_Transmit(CAN, MSG(1) , &msg1) == FALSE)
+    if (CAN_Transmit(CAN, deviceA.tMsgID , &msg1) == FALSE)
     {
         printf("set tx msg failed\r\n");
         return;
     }
 }
 
-void CAN0_transmit(void)
+uint8_t CAN0_transmit1(void)
 {
     uint8_t can_data[8] = {0};
 
-    static uint8_t cnt = 0;
+    __IO static uint8_t cnt = 0;
 
     can_data[0] = 0x5A;
     can_data[1] = 0x5A;
@@ -148,51 +354,123 @@ void CAN0_transmit(void)
     can_data[6] = 0xA5;
     can_data[7] = 0xA5;
 
-    CAN0_Sender(CustomID_CHECK,can_data,8);
+    CAN0_Sender(deviceA.Id,can_data,8);
 
     cnt++;
+
+    return 1;
+}
+
+void CAN0_StateMachine(uint8_t state)
+{
+	uint8_t DoneCheck = 0;
+    printf("%s:%d\r\n" , __FUNCTION__ , state );
+
+    switch(state)
+    {
+        case 1:
+            while(!DoneCheck)
+            {
+                DoneCheck = CAN0_transmit1();
+            }
+            DoneCheck = 0;
+            break;
+        case 2:
+            while(!DoneCheck)
+            {
+                DoneCheck = CAN0_transmit2();
+            }
+            DoneCheck = 0;
+            break;
+        case 3:
+            while(!DoneCheck)
+            {
+                DoneCheck = CAN0_transmit3();
+            }
+            DoneCheck = 0;
+            break;
+        case 4:
+            while(!DoneCheck)
+            {
+                DoneCheck = CAN0_transmit4();
+            }
+            DoneCheck = 0;
+            break;
+        case 5:
+            while(!DoneCheck)
+            {
+                DoneCheck = CAN0_transmit5();
+            }
+            DoneCheck = 0;
+            break;
+    }
 }
 
 void CAN0_SetRxMsg(void)
 {
     CAN_T *tCAN = CAN;
 
-    if(CAN_SetRxMsg(tCAN, MSG(8),CAN_EXT_ID, CustomID_CHECK) == FALSE)
+    if(CAN_SetRxMsg(tCAN, deviceA.rMsgID,deviceA.IdType, deviceA.Id) == FALSE)
     {
         printf("Set Rx Msg Object failed\n");
         return;
     }
 
-    if(CAN_SetRxMsg(tCAN, MSG(0),CAN_STD_ID, 0x7FF) == FALSE)
+    if(CAN_SetRxMsg(tCAN, deviceB.rMsgID,deviceB.IdType, deviceB.Id) == FALSE)
     {
         printf("Set Rx Msg Object failed\n");
         return;
     }
 
-    if(CAN_SetRxMsg(tCAN, MSG(5),CAN_EXT_ID, 0x12345) == FALSE)
+    #if 1   //similiar device ID , use RX mask to saving msg obj usage
+
+    if( CAN_SetRxMsgAndMsk(tCAN, deviceC.rMsgID, deviceC.IdType, deviceC.Id, CAN_STD_ID_MASK(0x700) | CAN_MASK_MSG_DIR) == FALSE)
     {
         printf("Set Rx Msg Object failed\n");
         return;
     }
 
-    if(CAN_SetRxMsg(tCAN, MSG(31),CAN_EXT_ID, 0x7FF01) == FALSE)
+    #else
+    if(CAN_SetRxMsg(tCAN, deviceC.rMsgID,deviceC.IdType, deviceC.Id) == FALSE)
+    {
+        printf("Set Rx Msg Object failed\n");
+        return;
+    }
+    #endif
+
+    if(CAN_SetRxMsg(tCAN, deviceD.rMsgID,deviceD.IdType, deviceD.Id) == FALSE)
     {
         printf("Set Rx Msg Object failed\n");
         return;
     }
 
+    #if 1   //similiar device ID , use RX mask to saving msg obj usage
+
+    if( CAN_SetRxMsgAndMsk(tCAN, deviceE.rMsgID, deviceE.IdType, deviceE.Id, CAN_EXT_ID_MASK(0x1FFFFFF0) | CAN_MASK_MSG_DIR | CAN_MASK_EXT_ID_BIT) == FALSE)
+    {
+        printf("Set Rx Msg Object failed\n");
+        return;
+    }
+    
+    #else   // use different msg obj num. 
+    if(CAN_SetRxMsg(tCAN, deviceE.rMsgID,deviceE.IdType, deviceE.Id) == FALSE)
+    {
+        printf("Set Rx Msg Object failed\n");
+        return;
+    }
+    #endif
 }
 
 void CAN_ShowMsg(STR_CANMSG_T* Msg)
 {
     uint8_t i;
 
-    // printf("(aa)Read ID=%8X, Type=%s, DLC=%d,Data=",Msg->Id,Msg->IdType?"EXT":"STD",Msg->DLC);
-    printf("(bb)Read ID=%8X, Type=%s, DLC=%d,Data=",Msg->Id,Msg->IdType?"EXT":"STD",Msg->DLC);
+    printf("(aa)Read ID=0x%8X, Type=%s, DLC=%d,Data=",Msg->Id,Msg->IdType?"EXT":"STD",Msg->DLC);
+    // printf("(bb)Read ID=0x%8X, Type=%s, DLC=%d,Data=",Msg->Id,Msg->IdType?"EXT":"STD",Msg->DLC);
 
     for(i=0; i<Msg->DLC; i++)
-        printf("%02X,",Msg->Data[i]);
-    printf("\n\n");
+        printf("0x%02X,",Msg->Data[i]);
+    printf("\r\n");
 }
 
 void CAN_MsgInterrupt(CAN_T *tCAN, uint32_t u32IIDR)
@@ -247,32 +525,58 @@ void CAN_MsgInterrupt(CAN_T *tCAN, uint32_t u32IIDR)
             break; //No used
     }
     #else
-    if(u32IIDR==1)
+    uint8_t msgID = u32IIDR-1;
+    STR_CANMSG_T rrMsg;
+
+    // printf("msgID : %d\r\n",msgID);
+    if ((msgID == deviceA.rMsgID) ||
+        (msgID == deviceB.rMsgID) ||
+        (msgID == deviceC.rMsgID) ||
+        (msgID == deviceD.rMsgID) ||
+        (msgID == deviceE.rMsgID) )
     {
-        printf("Msg-0 INT and Callback\n");
-        CAN_Receive(tCAN, 0, &rrMsg);
+        printf("Msg-%d INT and Callback\r\n" , msgID);
+        CAN_Receive(tCAN, MSG(msgID), &rrMsg);
         CAN_ShowMsg(&rrMsg);
+
+        printf("\r\n");
     }
 
-    if(u32IIDR==8+1)
-    {
-        printf("Msg-8 INT and Callback\n");
-        CAN_Receive(tCAN, 8, &rrMsg);
-        CAN_ShowMsg(&rrMsg);
-    }
+    // if(u32IIDR==0+1)
+    // {
+    //     printf("Msg-0 INT and Callback\n");
+    //     CAN_Receive(tCAN, MSG(0), &rrMsg);
+    //     CAN_ShowMsg(&rrMsg);
+    // }
 
-    if(u32IIDR==5+1)
-    {
-        printf("Msg-5 INT and Callback \n");
-        CAN_Receive(tCAN, 5, &rrMsg);
-        CAN_ShowMsg(&rrMsg);
-    }
-    if(u32IIDR==31+1)
-    {
-        printf("Msg-31 INT and Callback \n");
-        CAN_Receive(tCAN, 31, &rrMsg);
-        CAN_ShowMsg(&rrMsg);
-    }
+    // if(u32IIDR==5+1)
+    // {
+    //     printf("Msg-5 INT and Callback\n");
+    //     CAN_Receive(tCAN, MSG(5), &rrMsg);
+    //     CAN_ShowMsg(&rrMsg);
+    // }
+
+    // if(u32IIDR==8+1)
+    // {
+    //     printf("Msg-8 INT and Callback \n");
+    //     CAN_Receive(tCAN, MSG(8), &rrMsg);
+    //     CAN_ShowMsg(&rrMsg);
+    // }
+    
+    // if(u32IIDR==14+1)
+    // {
+    //     printf("Msg-14 INT and Callback \n");
+    //     CAN_Receive(tCAN, MSG(14), &rrMsg);
+    //     CAN_ShowMsg(&rrMsg);
+    // }
+
+    // if(u32IIDR==15+1)
+    // {
+    //     printf("Msg-15 INT and Callback \n");
+    //     CAN_Receive(tCAN, MSG(15), &rrMsg);
+    //     CAN_ShowMsg(&rrMsg);
+    // }
+
     #endif
 }
 
@@ -321,7 +625,7 @@ void CAN0_IRQHandler(void)
     }
     else if (u8IIDRstatus!=0)
     {
-        // printf("=> Interrupt Pointer = %d\n",CAN0->IIDR -1);
+        printf("=> Interrupt Pointer = %d\n",CAN->IIDR -1);
  
         CAN_MsgInterrupt(CAN, u8IIDRstatus);
 
@@ -333,6 +637,40 @@ void CAN0_IRQHandler(void)
 
         CAN->WU_STATUS = 0;                       /* Write '0' to clear */
     }
+
+}
+
+void CAN0_Device_Int(void)
+{
+    deviceA.FrameType   = CAN_DATA_FRAME;
+    deviceA.IdType      = CAN_EXT_ID;
+    deviceA.Id          = CAN_DEVICE_1;
+    deviceA.rMsgID      = CAN_DEVICE_1_MsgID_r;
+    deviceA.tMsgID      = CAN_DEVICE_1_MsgID_t;
+
+    deviceB.FrameType   = CAN_DATA_FRAME;
+    deviceB.IdType      = CAN_STD_ID;
+    deviceB.Id          = CAN_DEVICE_2;
+    deviceB.rMsgID      = CAN_DEVICE_2_MsgID_r;
+    deviceB.tMsgID      = CAN_DEVICE_2_MsgID_t;
+    
+    deviceC.FrameType   = CAN_DATA_FRAME;
+    deviceC.IdType      = CAN_STD_ID;
+    deviceC.Id          = CAN_DEVICE_3;
+    deviceC.rMsgID      = CAN_DEVICE_3_MsgID_r;
+    deviceC.tMsgID      = CAN_DEVICE_3_MsgID_t;
+    
+    deviceD.FrameType   = CAN_DATA_FRAME;
+    deviceD.IdType      = CAN_EXT_ID;
+    deviceD.Id          = CAN_DEVICE_4;
+    deviceD.rMsgID      = CAN_DEVICE_4_MsgID_r;
+    deviceD.tMsgID      = CAN_DEVICE_4_MsgID_t;
+    
+    deviceE.FrameType   = CAN_DATA_FRAME;
+    deviceE.IdType      = CAN_EXT_ID;
+    deviceE.Id          = CAN_DEVICE_5;
+    deviceE.rMsgID      = CAN_DEVICE_5_MsgID_r;
+    deviceE.tMsgID      = CAN_DEVICE_5_MsgID_t;
 
 }
 
@@ -349,8 +687,8 @@ void CAN0_Init(void)
     NVIC_SetPriority(CAN0_IRQn, (1<<__NVIC_PRIO_BITS) - 2);
     NVIC_EnableIRQ(CAN0_IRQn);    
     
-    // printf("%s (aa) \r\n",__FUNCTION__);
-    printf("%s (bb) \r\n",__FUNCTION__);
+    printf("%s (aa) \r\n",__FUNCTION__);
+    // printf("%s (bb) \r\n",__FUNCTION__);
 }
 
 
@@ -369,7 +707,22 @@ void TMR1_IRQHandler(void)
 
 		if ((get_tick() % 1000) == 0)
 		{
-            FLAG_PROJ_TIMER_PERIOD_1000MS = 1;//set_flag(flag_timer_period_1000ms ,ENABLE);
+            FLAG_PROJ_TIMER_PERIOD_1000MS = 1;
+		}
+
+		if ((get_tick() % 2000) == 0)
+		{
+            FLAG_PROJ_TIMER_PERIOD_2000MS = 1;
+		}
+
+		if ((get_tick() % 4000) == 0)
+		{
+            FLAG_PROJ_TIMER_PERIOD_4000MS = 1;
+		}
+
+		if ((get_tick() % 8000) == 0)
+		{
+            FLAG_PROJ_TIMER_PERIOD_8000MS = 1;
 		}
 
 		if ((get_tick() % 50) == 0)
@@ -389,8 +742,9 @@ void TIMER1_Init(void)
 
 void loop(void)
 {
-	static uint32_t LOG1 = 0;
+	// static uint32_t LOG1 = 0;
 	// static uint32_t LOG2 = 0;
+    static uint8_t cnt = 1;
 
     if ((get_systick() % 1000) == 0)
     {
@@ -401,11 +755,12 @@ void loop(void)
     {
         FLAG_PROJ_TIMER_PERIOD_1000MS = 0;//set_flag(flag_timer_period_1000ms ,DISABLE);
 
-        printf("%s(timer) : %4d\r\n",__FUNCTION__,LOG1++);
-		PA2 ^= 1;        
+        // printf("%s(timer) : %4d\r\n",__FUNCTION__,LOG1++);
+		PA2 ^= 1; 
 
-        
-        CAN0_transmit();
+        CAN0_StateMachine(cnt);
+
+        cnt = (cnt >= 5) ? ( 1 ) : ( cnt + 1) ;
     }
 }
 
@@ -560,6 +915,7 @@ int main()
     #endif
 
 	CAN0_Init();
+    CAN0_Device_Int();
     CAN0_SetRxMsg();
 
 
